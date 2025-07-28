@@ -21,7 +21,7 @@ def extract_keywords(text, max_keywords=8):
 Tu es un expert scientifique.
 
 À partir du texte ci-dessous, génère une liste de 5 à {max_keywords} expressions clés ou groupes de mots-clés scientifiques/techniques (2 à 5 mots chacun). Ces mots-clés doivent représenter précisément les concepts, technologies ou problématiques abordés. N’utilise pas de termes vagues ou trop génériques comme "recherche", "technologie", etc.
-essaye de choisir des expression combinés pour ne pas perdre le sens du texte, 
+
 Texte source :
 \"\"\"
 {text[:3000]}
