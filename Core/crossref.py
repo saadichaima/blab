@@ -18,7 +18,7 @@ def search_articles_crossref(keywords, max_articles=10):
                     "filter": "from-pub-date:2023",
                     "sort": "relevance"  # peut être changé par 'is-referenced-by-count' si plus pertinent
                 },
-                timeout=10
+                timeout=20
             )
             if res.status_code == 200:
                 items = res.json()["message"]["items"]

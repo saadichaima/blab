@@ -55,7 +55,7 @@ else:
 
             # Mots-clés
             st.subheader("🔑 Mots-clés extraits")
-            keywords_list = keywords.extract_keywords(full_text)
+            keywords_list = keywords.extract_keywords(verrou_technique)
             st.success("✅ Mots-clés : " + ", ".join(keywords_list))
 
             # Recherche d’articles
