@@ -77,7 +77,7 @@ else:
             # Stockage temporaire dans la session
             st.session_state["full_text"] = full_text
             st.session_state["chunks"] = document.chunk_text(full_text)
-            st.session_state["index"], st.session_state["vectors"] = embeddings.build_faiss_index(st.session_state["chunks"])
+            st.session_state["index"], st.session_state["vectors"] = embeddings.build_index(st.session_state["chunks"])
             st.session_state["articles"] = selected_articles
             st.success("✅ Documents analysés et articles récupérés.")
 

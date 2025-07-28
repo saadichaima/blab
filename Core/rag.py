@@ -36,9 +36,15 @@ def call_ai(prompt):
 # ─────────────────────────────
 def search_similar_chunks(query, index, chunks, vectors, top_k=3):
     q_vec = embed_texts([query])[0]
-    q_vec_np = np.array([q_vec], dtype=np.float32)
-    D, I = index.search(q_vec_np, top_k)
-    return [chunks[i] for i in I[0]]
+    q_vec_np = np.array([q_vec], dtype=np.float32).reshape(1, -1)
+    
+    # ⚠️ Ajuster top_k si nécessaire
+    actual_k = min(top_k, len(chunks))
+    
+    distances, indices = index.kneighbors(q_vec_np, n_neighbors=actual_k)
+    return [chunks[i] for i in indices[0]]
+
+
 
 # ─────────────────────────────
 # 🎯 Générateur générique

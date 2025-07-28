@@ -1,10 +1,8 @@
-# core/embeddings.py
-
 import os
 import numpy as np
-import faiss
 from dotenv import load_dotenv
 from openai import AzureOpenAI
+from sklearn.neighbors import NearestNeighbors
 
 load_dotenv()
 
@@ -23,10 +21,10 @@ def embed_texts(texts):
     return [np.array(e.embedding, dtype=np.float32) for e in response.data]
 
 
-def build_faiss_index(chunks):
-    """Construit un index FAISS à partir des chunks de texte"""
+def build_index(chunks):
+    """Construit un index avec sklearn (remplaçant de FAISS)"""
     vectors = embed_texts(chunks)
     dim = len(vectors[0])
-    index = faiss.IndexFlatL2(dim)
-    index.add(np.array(vectors))
+    index = NearestNeighbors(n_neighbors=5, metric="euclidean")
+    index.fit(vectors)
     return index, vectors
