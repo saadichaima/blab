@@ -75,7 +75,6 @@ Voici le contexte extrait des documents client :
 Consignes spécifiques :
 {prompt_instruction}
 
-Structure la section de manière claire, technique, et adaptée à un dossier CIR.
 """
     return call_ai(full_prompt)
 
