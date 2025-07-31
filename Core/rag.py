@@ -52,6 +52,12 @@ def search_similar_chunks(query, index, chunks, vectors, top_k=3):
     distances, indices = index.kneighbors(q_vec_np, n_neighbors=actual_k)
     return [chunks[i] for i in indices[0]]
 
+def build_prompt_from_template(template_str, objectif, verrou, annee):
+    return template_str.format(
+        objectif=objectif.strip(),
+        verrou=verrou.strip(),
+        annee=annee
+    )
 
 
 # ─────────────────────────────
@@ -76,23 +82,39 @@ Structure la section de manière claire, technique, et adaptée à un dossier CI
 # ─────────────────────────────
 # ✍️ Prompts spécifiques
 # ─────────────────────────────
-def prompt_contribution():
-    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/contribution.txt")
 
-def prompt_contexte():
-    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/prompt_contexte.txt")
 
-def prompt_indicateurs():
-    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/indicateurs.txt")
+def prompt_contribution(objectif, verrou, annee):
+    raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/contribution.txt"
+    template = fetch_prompt_from_git(raw_url)
+    return build_prompt_from_template(template, objectif, verrou, annee)
 
-def prompt_objectifs():
-    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/objectifs.txt")
+def prompt_contexte(objectif, verrou, annee):
+    raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/prompt_contexte.txt"
+    template = fetch_prompt_from_git(raw_url)
+    return build_prompt_from_template(template, objectif, verrou, annee)
 
-def prompt_travaux():
-    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/travaux.txt")
 
-def prompt_partenariat():
-    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/partenariat.txt")
+def prompt_indicateurs(objectif, verrou, annee):
+    raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/indicateurs.txt"
+    template = fetch_prompt_from_git(raw_url)
+    return build_prompt_from_template(template, objectif, verrou, annee)
+
+def prompt_objectifs(objectif, verrou, annee):
+    raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/objectifs.txt"
+    template = fetch_prompt_from_git(raw_url)
+    return build_prompt_from_template(template, objectif, verrou, annee)
+
+
+def prompt_travaux(objectif, verrou, annee):
+    raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/travaux.txt"
+    template = fetch_prompt_from_git(raw_url)
+    return build_prompt_from_template(template, objectif, verrou, annee)
+
+def prompt_partenariat(objectif, verrou, annee):
+    raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/partenariat.txt"
+    template = fetch_prompt_from_git(raw_url)
+    return build_prompt_from_template(template, objectif, verrou, annee)
 
 def prompt_verrou():
     return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/verrou.txt")
@@ -101,20 +123,20 @@ def prompt_verrou():
 # ─────────────────────────────
 # 🔧 Générateurs spécifiques
 # ─────────────────────────────
-def generate_contexte_section(index, chunks, vectors):
-    return generate_section_with_rag("Contexte de l’opération de R&D", prompt_contexte(), index, chunks, vectors)
+def generate_contexte_section(index, chunks, vectors,objectif,verrou,annee):
+    return generate_section_with_rag("Contexte de l’opération de R&D", prompt_contexte(objectif,verrou,annee), index, chunks, vectors)
 
-def generate_indicateurs_section(index, chunks, vectors):
-    return generate_section_with_rag("Indicateurs de R&D", prompt_indicateurs(), index, chunks, vectors)
+def generate_indicateurs_section(index, chunks, vectors,objectif,verrou,annee):
+    return generate_section_with_rag("Indicateurs de R&D", prompt_indicateurs(objectif,verrou,annee), index, chunks, vectors)
 
-def generate_objectifs_section(index, chunks, vectors):
-    return generate_section_with_rag("Objet de l’opération de R&D", prompt_objectifs(), index, chunks, vectors)
+def generate_objectifs_section(index, chunks, vectors,objectif,verrou,annee):
+    return generate_section_with_rag("Objet de l’opération de R&D", prompt_objectifs(objectif,verrou,annee), index, chunks, vectors)
 
-def generate_travaux_section(index, chunks, vectors):
-    return generate_section_with_rag("Description de la démarche suivie et des travaux réalisés", prompt_travaux(), index, chunks, vectors)
+def generate_travaux_section(index, chunks, vectors,objectif,verrou,annee):
+    return generate_section_with_rag("Description de la démarche suivie et des travaux réalisés", prompt_travaux(objectif,verrou,annee), index, chunks, vectors)
 
-def generate_contribution_section(index, chunks, vectors):
-    return generate_section_with_rag("Contribution scientifique, technique ou technologique", prompt_contribution(), index, chunks, vectors)
+def generate_contribution_section(index, chunks, vectors,objectif,verrou,annee):
+    return generate_section_with_rag("Contribution scientifique, technique ou technologique", prompt_contribution(objectif,verrou,annee), index, chunks, vectors)
 
-def generate_partenariat_section(index, chunks, vectors):
-    return generate_section_with_rag("Partenariat scientifique et recherche confiée", prompt_partenariat(), index, chunks, vectors)
+def generate_partenariat_section(index, chunks, vectors,objectif,verrou,annee):
+    return generate_section_with_rag("Partenariat scientifique et recherche confiée", prompt_partenariat(objectif,verrou,annee), index, chunks, vectors)

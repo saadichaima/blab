@@ -5,46 +5,53 @@ import os
 # ──────────────────────────────
 # CONFIGURATION GÉNÉRALE
 # ──────────────────────────────
-st.set_page_config(page_title="Assistant CIR", layout="wide")
+st.set_page_config(page_title="Assistant CIR", page_icon="🧾")
 st.title("🧠 Assistant CIR")
 
 # ──────────────────────────────
 # BARRE LATÉRALE
 # ──────────────────────────────
-st.sidebar.title("🛠 Paramètres")
 
-projet_name = st.sidebar.text_input("📝 Nom du projet")
-temperature = st.sidebar.slider("🎯 Température IA (créativité)", 0.0, 1.0, 0.4, 0.1)
 
-st.sidebar.markdown("---")
+col_projet, col_annee = st.columns([2, 1])
+with col_projet:
+    projet_name = st.text_input("📝 Nom du projet *")
+with col_annee:
+    annee = st.number_input("📅 Année *", min_value=2000, max_value=2100, value=2025, step=1, format="%d")
+
+
+
 st.sidebar.markdown("💡 *Assistant CIR utilisant GPT, FAISS et CrossRef.*")
 st.sidebar.markdown("👨‍🔬 Développé pour aider à la génération semi-automatique de dossiers de Crédit d’Impôt Recherche.")
 
 # ──────────────────────────────
 # SAISIE DU VERROU TECHNIQUE
 # ──────────────────────────────
-verrou_technique = st.text_area("🔐 Décrivez le verrou technique du projet", placeholder="Expliquez ici le verrou scientifique ou technique rencontré dans le cadre du projet...")
+objectif = st.text_area("🎯 Objectif du projet *", placeholder="Décrivez l’objectif du projet ici...")
+verrou_technique = st.text_area("🔐 Verrou technique (optionnel)", placeholder="Expliquez ici le verrou scientifique ou technique rencontré…")
 
 # ──────────────────────────────
 # TÉLÉVERSEMENT DE DOCUMENTS
 # ──────────────────────────────
-uploaded_files = st.file_uploader("📎 Téléversez les documents client", type=["pdf", "docx"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("📎 Téléversez les documents client *", type=["pdf", "docx"], accept_multiple_files=True)
 
 # ──────────────────────────────
 # CONDITIONS REQUISES POUR LES ACTIONS
 # ──────────────────────────────
-is_ready = bool(projet_name and uploaded_files and verrou_technique)
+is_ready = bool(projet_name and objectif and uploaded_files)
 
 if not is_ready:
     st.warning("🛑 Veuillez remplir tous les champs requis (nom du projet, verrou technique et documents) pour activer les actions.")
 else:
     # Boutons côte à côte
-    col1, col2,col3,col4 = st.columns(4)
-
+    col1, col2, col3 = st.columns(3)
     with col1:
-        rechercher = st.button("🔍 Rechercher des articles scientifiques")
+       rechercher = st.button("🔍 Recherche article API")
     with col2:
-        generer = st.button("✨ Générer le dossier CIR")
+       generer = st.button("✨ Générer le dossier CIR")
+    with col3:
+       prompt_search = st.button("🔎 Recherche article prompt")
+
 
     if rechercher:
         with st.spinner("📄 Lecture et indexation des documents..."):
@@ -86,17 +93,17 @@ else:
             with st.spinner("✍️ Rédaction des sections..."):
                 sections = {
                     "Contexte de l’opération de R&D": rag.generate_contexte_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"]),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"],objectif,verrou_technique,annee),
                     "Indicateurs de R&D": rag.generate_indicateurs_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"]),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"],objectif,verrou_technique,annee),
                     "Objet de l’opération de R&D": rag.generate_objectifs_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"]),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"],objectif,verrou_technique,annee),
                     "Description de la démarche suivie et des travaux réalisés": rag.generate_travaux_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"]),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"],objectif,verrou_technique,annee),
                     "Contribution scientifique, technique ou technologique": rag.generate_contribution_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"]),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"],objectif,verrou_technique,annee),
                     "Partenariat scientifique et recherche confiée": rag.generate_partenariat_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"]),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"],objectif,verrou_technique,annee),
                     "État de l’art scientifique": writer.generer_etat_art(st.session_state.get("articles", [])),
                     "Verrou technique rencontré": verrou_technique
                 }
