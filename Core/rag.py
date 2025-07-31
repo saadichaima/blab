@@ -5,6 +5,7 @@ import numpy as np
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from Core.embeddings import embed_texts
+import requests
 
 load_dotenv()
 
@@ -30,6 +31,13 @@ def call_ai(prompt):
         max_tokens=1500
     )
     return response.choices[0].message.content
+def fetch_prompt_from_git(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.text.strip()
+    except Exception as e:
+        return f"❌ Erreur lors du chargement du prompt : {e}"
 
 # ─────────────────────────────
 # 🔍 Recherche sémantique
@@ -68,55 +76,27 @@ Structure la section de manière claire, technique, et adaptée à un dossier CI
 # ─────────────────────────────
 # ✍️ Prompts spécifiques
 # ─────────────────────────────
+def prompt_contribution():
+    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/contribution.txt")
+
 def prompt_contexte():
-    return """
-Présente :
-- Le domaine scientifique ou technique du projet
-- L’environnement industriel de l’entreprise
-- Les enjeux ou motivations ayant conduit au projet
-- Les problématiques initiales visées
-"""
+    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/prompt_contexte.txt")
 
 def prompt_indicateurs():
-    return """
-Indique les critères CIR démontrant qu’il s’agit d’un projet de R&D :
-- Inconnues ou incertitudes scientifiques/techniques
-- Méthodologie expérimentale
-- Prototypes, essais, itérations
-- Avancées techniques observables
-"""
+    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/indicateurs.txt")
 
 def prompt_objectifs():
-    return """
-Décris les objectifs techniques du projet :
-- Verrous scientifiques ou technologiques
-- Objectifs mesurables
-- Ce que le projet cherche à résoudre
-"""
+    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/objectifs.txt")
 
 def prompt_travaux():
-    return """
-Décris les étapes de la démarche :
-- Étapes clés du projet (études, tests, développements)
-- Approche méthodologique
-- Travaux réalisés par l'équipe
-"""
-
-def prompt_contribution():
-    return """
-Explique en quoi le projet apporte une contribution :
-- Nouveaux savoirs ou techniques développés
-- Éléments innovants ou originaux
-- Différences avec l’état de l’art
-"""
+    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/travaux.txt")
 
 def prompt_partenariat():
-    return """
-Présente :
-- Les partenaires impliqués (laboratoires, universités, prestataires)
-- Les travaux externalisés
-- Justification des collaborations R&D
-"""
+    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/partenariat.txt")
+
+def prompt_verrou():
+    return fetch_prompt_from_git("https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/verrou.txt")
+
 
 # ─────────────────────────────
 # 🔧 Générateurs spécifiques
