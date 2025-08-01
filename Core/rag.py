@@ -75,6 +75,7 @@ Voici le contexte extrait des documents client :
 Consignes spécifiques :
 {prompt_instruction}
 
+
 """
     return call_ai(full_prompt)
 
