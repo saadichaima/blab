@@ -3,14 +3,10 @@ from Core import document, keywords, embeddings, rag, crossref, writer
 import os
 
 # ──────────────────────────────
-# CONFIGURATION GÉNÉRALE
+# CONFIGURATION
 # ──────────────────────────────
 st.set_page_config(page_title="Assistant CIR", page_icon="🧾")
 st.title("🧠 Assistant CIR")
-
-# ──────────────────────────────
-# BARRE LATÉRALE
-# ──────────────────────────────
 
 col_projet, col_annee = st.columns([2, 1])
 with col_projet:
@@ -18,52 +14,68 @@ with col_projet:
 with col_annee:
     annee = st.number_input("📅 Année *", min_value=2000, max_value=2100, value=2025, step=1, format="%d")
 
-st.sidebar.markdown("💡 *Assistant CIR utilisant GPT, FAISS et CrossRef.*")
-st.sidebar.markdown("👨‍🔬 Développé pour aider à la génération semi-automatique de dossiers de Crédit d’Impôt Recherche.")
-
-# ──────────────────────────────
-# SAISIE DE L’OBJECTIF ET VERROU TECHNIQUE
-# ──────────────────────────────
 objectif = st.text_area("🎯 Objectif du projet *", placeholder="Décrivez l’objectif du projet ici...")
 
-# Charger le verrou depuis la session si disponible
+# ──────────────────────────────
+# TÉLÉVERSEMENT DE DOCUMENTS (optionnels)
+# ──────────────────────────────
+uploaded_files_client = st.file_uploader("📎 Téléversez les documents **client** (optionnel)", type=["pdf", "docx"], accept_multiple_files=True)
+uploaded_files_admin = st.file_uploader("📁 Téléversez les documents **administratifs** (optionnel)", type=["pdf", "docx"], accept_multiple_files=True)
+
+# ──────────────────────────────
+# BOUTON : GÉNÉRER OBJETS
+# ──────────────────────────────
+# ──────────────────────────────
+# BOUTON : GÉNÉRER LA SECTION "OBJET DE L’OPÉRATION DE R&D"
+# ──────────────────────────────
+if st.button("🛠️ Générer la section « Objet de l’opération de R&D »"):
+    if not uploaded_files_client:
+        st.warning("📂 Veuillez téléverser au moins un document client.")
+    elif not objectif.strip():
+        st.warning("✏️ Veuillez saisir l’objectif du projet.")
+    else:
+        with st.spinner("📄 Lecture et indexation des documents client..."):
+            full_text = ""
+            for file in uploaded_files_client:
+                full_text += "\n" + document.extract_text(file)
+            chunks = document.chunk_text(full_text)
+            index, vectors = embeddings.build_index(chunks)
+
+            st.session_state["full_text"] = full_text
+            st.session_state["chunks"] = chunks
+            st.session_state["index"] = index
+            st.session_state["vectors"] = vectors
+
+        with st.spinner("🧠 Génération de la section « Objet de l’opération de R&D »..."):
+            verrou = st.session_state.get("verrou_technique", "")
+            objet_section = rag.generate_objectifs_section(
+                index=index,
+                chunks=chunks,
+                vectors=vectors,
+                objectif=objectif,
+                verrou=verrou,
+                annee=annee
+            )
+            st.session_state["objet_section"] = objet_section
+
+        st.success("✅ Section générée avec succès !")
+        st.text_area("📄 Objet de l’opération de R&D :", objet_section, height=300)
+
+
+# ──────────────────────────────
+# VERROU TECHNIQUE (optionnel)
+# ──────────────────────────────
 verrou_technique = st.session_state.get("verrou_technique", "")
 verrou_technique = st.text_area("🔐 Verrou technique (optionnel)", value=verrou_technique, placeholder="Expliquez ici le verrou scientifique ou technique rencontré…")
 
-# 🚀 Générer automatiquement le verrou si vide
-
-
-# ──────────────────────────────
-# TÉLÉVERSEMENT DE DOCUMENTS
-# ──────────────────────────────
-uploaded_files = st.file_uploader("📎 Téléversez les documents client *", type=["pdf", "docx"], accept_multiple_files=True)
-# 🚀 Générer automatiquement le verrou si vide
 if not verrou_technique.strip():
     st.warning("🔐 Aucun verrou technique saisi.")
     if st.button("✨ Générer le verrou technique automatiquement"):
-
-        # Si les documents ne sont pas encore indexés → le faire ici
-        if "index" not in st.session_state or "chunks" not in st.session_state:
-            if not uploaded_files:
-                st.error("❗ Veuillez d'abord téléverser au moins un document client.")
-            else:
-                with st.spinner("📄 Indexation des documents client..."):
-                    full_text = ""
-                    for file in uploaded_files:
-                        full_text += "\n" + document.extract_text(file)
-
-                    chunks = document.chunk_text(full_text)
-                    index, vectors = embeddings.build_index(chunks)
-
-                    st.session_state["full_text"] = full_text
-                    st.session_state["chunks"] = chunks
-                    st.session_state["index"] = index
-                    st.session_state["vectors"] = vectors
-
-        # Si tout est prêt → génération du verrou
-        if "index" in st.session_state:
-            st.info("📄 Le verrou technique est généré uniquement à partir des documents client.")
-            with st.spinner("🔎 Génération du verrou technique en cours..."):
+        if "index" not in st.session_state:
+            st.error("❗ Veuillez d'abord générer les objets à partir des documents client.")
+        else:
+            st.info("📄 Le verrou sera généré uniquement à partir des documents client.")
+            with st.spinner("🔎 Génération du verrou technique..."):
                 verrou_genere = rag.generate_section_with_rag(
                     "Verrou technique",
                     rag.prompt_verrou(),
@@ -76,12 +88,12 @@ if not verrou_technique.strip():
                 st.text_area("🔐 Verrou généré :", verrou_genere, height=300)
 
 # ──────────────────────────────
-# CONDITIONS REQUISES POUR LES ACTIONS
+# ACTIONS FINALES
 # ──────────────────────────────
-is_ready = bool(projet_name and objectif and uploaded_files)
+is_ready = bool(projet_name and objectif)
 
 if not is_ready:
-    st.warning("🛑 Veuillez remplir tous les champs requis (nom du projet, objectif et documents) pour activer les actions.")
+    st.warning("🛑 Veuillez remplir les champs requis (nom du projet et objectif).")
 else:
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -92,36 +104,27 @@ else:
         prompt_search = st.button("🔎 Recherche article prompt")
 
     if rechercher:
-        with st.spinner("📄 Lecture et indexation des documents..."):
-            full_text = ""
-            for file in uploaded_files:
-                st.write(f"📄 Lecture : {file.name}")
-                full_text += "\n" + document.extract_text(file)
+        if "full_text" not in st.session_state:
+            st.error("❗ Veuillez d'abord téléverser des documents client et générer les objets.")
+        else:
+            with st.spinner("📄 Analyse des documents..."):
+                keywords_list = keywords.extract_keywords(st.session_state["full_text"])
+                st.success("✅ Mots-clés : " + ", ".join(keywords_list))
 
-            st.subheader("🔑 Mots-clés extraits")
-            keywords_list = keywords.extract_keywords(full_text)
-            st.success("✅ Mots-clés : " + ", ".join(keywords_list))
+                st.subheader("📚 Articles scientifiques suggérés")
+                articles = crossref.search_articles_crossref(keywords_list)
+                selected_articles = []
 
-            st.subheader("📚 Articles scientifiques suggérés")
-            articles = crossref.search_articles_crossref(keywords_list)
-            selected_articles = []
+                for i, article in enumerate(articles):
+                    checked = st.checkbox(f"{article['title']} ({article['year']}) — {article['authors']}", value=True, key=f"art_{i}")
+                    if article.get("url"):
+                        st.markdown(f"[🔗 Voir l'article]({article['url']})", unsafe_allow_html=True)
+                    if checked:
+                        article["selected"] = True
+                        selected_articles.append(article)
 
-            for i, article in enumerate(articles):
-                title_line = f"{article['title']} ({article['year']}) — {article['authors']}"
-                checked = st.checkbox(title_line, value=True, key=f"art_{i}")
-
-                if article.get("url"):
-                    st.markdown(f"[🔗 Voir l'article]({article['url']})", unsafe_allow_html=True)
-
-                if checked:
-                    article["selected"] = True
-                    selected_articles.append(article)
-
-            st.session_state["full_text"] = full_text
-            st.session_state["chunks"] = document.chunk_text(full_text)
-            st.session_state["index"], st.session_state["vectors"] = embeddings.build_index(st.session_state["chunks"])
-            st.session_state["articles"] = selected_articles
-            st.success("✅ Documents analysés et articles récupérés.")
+                st.session_state["articles"] = selected_articles
+                st.success("✅ Articles sélectionnés.")
 
     if generer:
         if "index" in st.session_state:
@@ -151,4 +154,4 @@ else:
                 with open(output_path, "rb") as f:
                     st.download_button("📥 Télécharger le dossier Word", f, file_name=os.path.basename(output_path))
         else:
-            st.error("❗ Veuillez d'abord lancer la recherche d'articles avant de générer le dossier.")
+            st.error("❗ Veuillez d'abord générer les objets à partir des documents client.")
