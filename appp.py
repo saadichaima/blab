@@ -8,7 +8,7 @@ import os
 st.set_page_config(page_title="Assistant CIR", page_icon="🧾")
 st.title("🧠 Assistant CIR")
 
-col_societe,col_projet, col_annee = st.columns([1,1, 1])
+col_societe, col_projet, col_annee = st.columns([1, 1, 1])
 with col_projet:
     projet_name = st.text_input("📝 Nom du projet *")
 with col_annee:
@@ -24,8 +24,11 @@ uploaded_files_client = st.file_uploader("📎 Téléversez les documents **clie
 uploaded_files_admin = st.file_uploader("📁 Téléversez les documents **administratifs** (optionnel)", type=["pdf", "docx"], accept_multiple_files=True)
 
 # ──────────────────────────────
-# BOUTON : GÉNÉRER LA SECTION "OBJET"
+# GÉNÉRATION DE LA SECTION OBJET
 # ──────────────────────────────
+if "articles" not in st.session_state:
+    st.info("🔍 Astuce : Pour enrichir la section avec des publications scientifiques, effectuez d'abord une recherche d'articles.")
+
 if st.button("🛠️ Générer la section « Objet de l’opération de R&D »"):
     if not uploaded_files_client:
         st.warning("📂 Veuillez téléverser au moins un document client.")
@@ -33,7 +36,6 @@ if st.button("🛠️ Générer la section « Objet de l’opération de R&D »"
         st.warning("✏️ Veuillez saisir l’objectif du projet.")
     else:
         with st.spinner("📄 Lecture et indexation des documents client..."):
-            # Lecture des documents client
             full_text = ""
             for file in uploaded_files_client:
                 full_text += "\n" + document.extract_text(file)
@@ -45,13 +47,11 @@ if st.button("🛠️ Générer la section « Objet de l’opération de R&D »"
             st.session_state["index"] = index
             st.session_state["vectors"] = vectors
 
-            # Lecture des documents administratifs
             full_text_admin = ""
             if uploaded_files_admin:
                 for file in uploaded_files_admin:
                     full_text_admin += "\n" + document.extract_text(file)
 
-            # Fusion des deux sources
             full_text_mix = full_text + "\n" + full_text_admin if full_text_admin else full_text
             chunks_mix = document.chunk_text(full_text_mix)
             index_mix, vectors_mix = embeddings.build_index(chunks_mix)
@@ -60,27 +60,36 @@ if st.button("🛠️ Générer la section « Objet de l’opération de R&D »"
             st.session_state["chunks_mix"] = chunks_mix
             st.session_state["index_mix"] = index_mix
             st.session_state["vectors_mix"] = vectors_mix
-
         with st.spinner("🧠 Génération de la section « Objet de l’opération de R&D »..."):
             verrou = st.session_state.get("verrou_technique", "")
-            objet_section = rag.generate_objectifs_section(
+            articles_selectionnes = st.session_state.get("articles", [])
+
+            objet_genere = rag.generate_objectifs_section(
                 index=index,
                 chunks=chunks,
                 vectors=vectors,
                 objectif=objectif,
                 verrou=verrou,
                 annee=annee,
-                societe=societe
+                societe=societe,
+                articles=articles_selectionnes
             )
-            st.session_state["objet_section"] = objet_section
 
         st.success("✅ Section générée avec succès !")
-        st.text_area("📄 Objet de l’opération de R&D :", objet_section, height=300)
+        st.text_area("📄 Objet de l’opération de R&D :", objet_genere, height=300)
+
+        # 🧠 Sauvegarde pour plus tard
+        st.session_state["objet_genere"] = objet_genere
+        st.session_state["objet_section"] = objet_genere
+
+
+
 
 # ──────────────────────────────
 # VERROU TECHNIQUE (optionnel)
 # ──────────────────────────────
 objet_section = st.session_state.get("objet_section", "")
+objet_genere = st.session_state.get("objet_genere", "")
 
 verrou_technique = st.session_state.get("verrou_technique", "")
 verrou_technique = st.text_area("🔐 Verrou technique (optionnel)", value=verrou_technique, placeholder="Expliquez ici le verrou scientifique ou technique rencontré…")
@@ -90,25 +99,28 @@ if not verrou_technique.strip():
     if st.button("✨ Générer le verrou technique automatiquement"):
         if "index" not in st.session_state:
             st.error("❗ Veuillez d'abord générer les objets à partir des documents client.")
-        elif not objet_section.strip():
+        elif not objet_genere.strip():
             st.error("❗ Veuillez d'abord générer la section « Objet de l’opération de R&D ».")
         else:
             st.info("📄 Le verrou sera généré uniquement à partir des documents client.")
             with st.spinner("🔎 Génération du verrou technique..."):
                 verrou_genere = rag.generate_section_with_rag(
                     "Verrou technique",
-                    rag.prompt_verrou(objet_section),
+                    rag.prompt_verrou(objet_genere),
                     st.session_state["index"],
                     st.session_state["chunks"],
                     st.session_state["vectors"]
                 )
                 st.session_state["verrou_technique"] = verrou_genere
+                objet_complet = objet_genere.strip() + "\n\n🔐 **Verrou technique rencontré :**\n" + verrou_genere.strip()
+                st.session_state["objet_section"] = objet_complet
                 st.success("✅ Verrou technique généré automatiquement.")
                 st.text_area("🔐 Verrou généré :", verrou_genere, height=300)
 
 # ──────────────────────────────
 # ACTIONS FINALES
 # ──────────────────────────────
+
 is_ready = bool(projet_name and objectif)
 
 if not is_ready:
@@ -122,28 +134,53 @@ else:
     with col3:
         prompt_search = st.button("🔎 Recherche article prompt")
 
+
     if rechercher:
-        if "full_text" not in st.session_state:
-            st.error("❗ Veuillez d'abord téléverser des documents client et générer les objets.")
-        else:
-            with st.spinner("📄 Analyse des documents..."):
-                keywords_list = keywords.extract_keywords(st.session_state["full_text"])
-                st.success("✅ Mots-clés : " + ", ".join(keywords_list))
+     if not objectif.strip():
+        st.error("❗ Veuillez d'abord saisir l’objectif du projet.")
+     else:
+        with st.spinner("📄 Analyse des documents..."):
+            keywords_list = keywords.extract_keywords(objectif)
+            st.success("✅ Mots-clés : " + ", ".join(keywords_list))
 
-                st.subheader("📚 Articles scientifiques suggérés")
-                articles = crossref.search_articles_crossref(keywords_list)
-                selected_articles = []
+            # Charger les articles suggérés une seule fois
+            if "articles_suggested" not in st.session_state:
+                st.session_state["articles_suggested"] = crossref.search_articles_crossref(keywords_list, annee_reference=annee)
 
-                for i, article in enumerate(articles):
-                    checked = st.checkbox(f"{article['title']} ({article['year']}) — {article['authors']}", value=True, key=f"art_{i}")
-                    if article.get("url"):
-                        st.markdown(f"[🔗 Voir l'article]({article['url']})", unsafe_allow_html=True)
-                    if checked:
-                        article["selected"] = True
-                        selected_articles.append(article)
+        st.subheader("📚 Articles scientifiques suggérés")
 
-                st.session_state["articles"] = selected_articles
-                st.success("✅ Articles sélectionnés.")
+        # Liste temporaire mise à jour
+        updated_articles = []
+
+        for i, article in enumerate(st.session_state["articles_suggested"]):
+            key = f"article_select_{i}"
+
+            # Utiliser la valeur précédente du checkbox (stockée dans article["selected"])
+            default_checked = article.get("selected", True)
+            checked = st.checkbox(
+                f"{article['title']} ({article['year']}) — {article['authors']}",
+                value=default_checked,
+                key=key
+            )
+
+            # Affichage du lien
+            if article.get("url"):
+                st.markdown(f"[🔗 Voir l'article]({article['url']})", unsafe_allow_html=True)
+
+            # Mettre à jour la sélection
+            article["selected"] = checked
+            updated_articles.append(article)
+
+        # ✅ Mémorise tous les articles (cochés et décochés)
+        st.session_state["articles_suggested"] = updated_articles
+
+        # ✅ Garde uniquement les sélectionnés pour les parties : objectifs / biblio
+        st.session_state["articles"] = [a for a in updated_articles if a["selected"]]
+
+        st.success(f"✅ {len(st.session_state['articles'])} article(s) sélectionné(s).")
+
+    
+  
 
     if generer:
         if "index" in st.session_state:
@@ -151,19 +188,21 @@ else:
             with st.spinner("✍️ Rédaction des sections..."):
                 sections = {
                     "Contexte de l’opération de R&D": rag.generate_contexte_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objectif, verrou_final, annee,societe),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objectif, verrou_final, annee, societe),
                     "Indicateurs de R&D": rag.generate_indicateurs_section(
-                        st.session_state["index_mix"], st.session_state["chunks_mix"], st.session_state["vectors_mix"], objectif, verrou_final, annee,societe),
-                    "Objet de l’opération de R&D": rag.generate_objectifs_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objectif, verrou_final, annee,societe),
+                        st.session_state["index_mix"], st.session_state["chunks_mix"], st.session_state["vectors_mix"], objectif, verrou_final, annee, societe),
+                    "Objet de l’opération de R&D": st.session_state.get("objet_section", st.session_state.get("objet_genere", "")),
                     "Description de la démarche suivie et des travaux réalisés": rag.generate_travaux_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objectif, verrou_final, annee,societe),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objectif, verrou_final, annee, societe),
                     "Contribution scientifique, technique ou technologique": rag.generate_contribution_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objectif, verrou_final, annee,societe),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objectif, verrou_final, annee, societe),
                     "Références bibliographiques": rag.generate_biblio_section(
-                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"], objet_section),
+                        st.session_state["index"], st.session_state["chunks"], st.session_state["vectors"],
+                        st.session_state.get("objet_section", ""),
+                        st.session_state.get("articles", [])  # ✅ Passage des articles à la biblio
+                    ),
                     "Partenariat scientifique et recherche confiée": rag.generate_partenariat_section(
-                        st.session_state["index_mix"], st.session_state["chunks_mix"], st.session_state["vectors_mix"], objectif, verrou_final, annee,societe),
+                        st.session_state["index_mix"], st.session_state["chunks_mix"], st.session_state["vectors_mix"], objectif, verrou_final, annee, societe),
                     "État de l’art scientifique": writer.generer_etat_art(st.session_state.get("articles", [])),
                     "Verrou technique rencontré": verrou_final
                 }

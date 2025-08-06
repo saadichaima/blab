@@ -3,10 +3,13 @@
 import requests
 import time
 
-def search_articles_crossref(keywords, max_articles=10):
-    """Recherche les meilleurs articles scientifiques récents à partir des mots-clés"""
+def search_articles_crossref(keywords, annee_reference=2025, max_articles=10):
+    """Recherche les meilleurs articles scientifiques publiés entre (annee_reference - 5) et (annee_reference - 1)"""
     base_url = "https://api.crossref.org/works"
     found = []
+
+    start_year = annee_reference - 5
+    end_year = annee_reference - 1
 
     for kw in keywords:
         try:
@@ -15,21 +18,22 @@ def search_articles_crossref(keywords, max_articles=10):
                 params={
                     "query": kw,
                     "rows": max_articles,
-                    "filter": "from-pub-date:2023",
-                    "sort": "relevance"  # peut être changé par 'is-referenced-by-count' si plus pertinent
+                    "filter": f"from-pub-date:{start_year},until-pub-date:{end_year}",
+                    "sort": "relevance"
                 },
-                timeout=10
+                timeout=20
             )
+
             if res.status_code == 200:
                 items = res.json()["message"]["items"]
                 for item in items:
-                    # Vérification de l’année
                     pub_year = (
                         item.get("published-print", {}).get("date-parts", [[None]])[0][0]
                         or item.get("published-online", {}).get("date-parts", [[None]])[0][0]
                         or item.get("created", {}).get("date-parts", [[None]])[0][0]
                     )
-                    if pub_year and int(pub_year) >= 2023:
+
+                    if pub_year and start_year <= int(pub_year) <= end_year:
                         found.append({
                             "title": item.get("title", ["Sans titre"])[0],
                             "year": pub_year,
@@ -38,16 +42,16 @@ def search_articles_crossref(keywords, max_articles=10):
                             ) if item.get("author") else "Auteur inconnu",
                             "url": item.get("URL", ""),
                             "citations": item.get("is-referenced-by-count", 0),
-                            "selected": True  # Par défaut cochés
+                            "selected": True
                         })
 
-            time.sleep(1)  # éviter le blocage de l'API
+            time.sleep(1)  # anti-spam CrossRef
         except Exception as e:
             print(f"Erreur CrossRef pour '{kw}': {e}")
             continue
 
-    # Trier tous les articles trouvés par nombre de citations décroissant
+    # Trier par nombre de citations décroissant
     found.sort(key=lambda x: x["citations"], reverse=True)
 
-    # Ne garder que les 10 meilleurs globalement
+    # Retourner les meilleurs articles
     return found[:max_articles]

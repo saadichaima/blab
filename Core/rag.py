@@ -31,6 +31,7 @@ def call_ai(prompt):
         max_tokens=1500
     )
     return response.choices[0].message.content
+
 def fetch_prompt_from_git(url):
     try:
         response = requests.get(url)
@@ -45,27 +46,21 @@ def fetch_prompt_from_git(url):
 def search_similar_chunks(query, index, chunks, vectors, top_k=3):
     q_vec = embed_texts([query])[0]
     q_vec_np = np.array([q_vec], dtype=np.float32).reshape(1, -1)
-    
-    # ⚠️ Ajuster top_k si nécessaire
+
     actual_k = min(top_k, len(chunks))
-    
     distances, indices = index.kneighbors(q_vec_np, n_neighbors=actual_k)
     return [chunks[i] for i in indices[0]]
 
-def build_prompt_from_template(template_str, objectif, verrou, annee,societe):
+def build_prompt_from_template(template_str, objectif, verrou, annee, societe):
     return template_str.format(
         objectif=objectif.strip(),
         verrou=verrou.strip(),
         annee=annee,
         societe=societe.strip(),
- 
     )
-def build_prompt_from_template_verrou(template_str, objet):
-    return template_str.format(
-        objet=objet.strip(),
 
- 
-    )
+def build_prompt_from_template_verrou(template_str, objet):
+    return template_str.format(objet=objet.strip())
 
 # ─────────────────────────────
 # 🎯 Générateur générique
@@ -81,8 +76,6 @@ Voici le contexte extrait des documents client :
 
 Consignes spécifiques :
 {prompt_instruction}
-
-
 """
     return call_ai(full_prompt)
 
@@ -90,43 +83,41 @@ Consignes spécifiques :
 # ✍️ Prompts spécifiques
 # ─────────────────────────────
 
-
-def prompt_contribution(objectif, verrou, annee,societe):
+def prompt_contribution(objectif, verrou, annee, societe):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/contribution.txt"
     template = fetch_prompt_from_git(raw_url)
-    return build_prompt_from_template(template, objectif, verrou, annee,societe)
+    return build_prompt_from_template(template, objectif, verrou, annee, societe)
 
-def prompt_contexte(objectif, verrou, annee,societe):
+def prompt_contexte(objectif, verrou, annee, societe):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/prompt_contexte.txt"
     template = fetch_prompt_from_git(raw_url)
-    return build_prompt_from_template(template, objectif, verrou, annee,societe)
+    return build_prompt_from_template(template, objectif, verrou, annee, societe)
 
-
-def prompt_indicateurs(objectif, verrou, annee,societe):
+def prompt_indicateurs(objectif, verrou, annee, societe):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/indicateurs.txt"
     template = fetch_prompt_from_git(raw_url)
-    return build_prompt_from_template(template, objectif, verrou, annee,societe)
+    return build_prompt_from_template(template, objectif, verrou, annee, societe)
 
-def prompt_objectifs(objectif, verrou, annee,societe):
+def prompt_objectifs(objectif, verrou, annee, societe):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/objectifs.txt"
     template = fetch_prompt_from_git(raw_url)
-    return build_prompt_from_template(template, objectif, verrou, annee,societe)
+    return build_prompt_from_template(template, objectif, verrou, annee, societe)
 
-
-def prompt_travaux(objectif, verrou, annee,societe):
+def prompt_travaux(objectif, verrou, annee, societe):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/travaux.txt"
     template = fetch_prompt_from_git(raw_url)
-    return build_prompt_from_template(template, objectif, verrou, annee,societe)
+    return build_prompt_from_template(template, objectif, verrou, annee, societe)
 
-def prompt_partenariat(objectif, verrou, annee,societe):
+def prompt_partenariat(objectif, verrou, annee, societe):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/partenariat.txt"
     template = fetch_prompt_from_git(raw_url)
-    return build_prompt_from_template(template, objectif, verrou, annee,societe)
+    return build_prompt_from_template(template, objectif, verrou, annee, societe)
 
 def prompt_verrou(objet):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/verrou.txt"
     template = fetch_prompt_from_git(raw_url)
     return build_prompt_from_template_verrou(template, objet)
+
 def prompt_biblio(objet):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/bibliographie.txt"
     template = fetch_prompt_from_git(raw_url)
@@ -135,22 +126,45 @@ def prompt_biblio(objet):
 # ─────────────────────────────
 # 🔧 Générateurs spécifiques
 # ─────────────────────────────
-def generate_contexte_section(index, chunks, vectors,objectif,verrou,annee,societe):
-    return generate_section_with_rag("Contexte de l’opération de R&D", prompt_contexte(objectif,verrou,annee,societe), index, chunks, vectors)
 
-def generate_indicateurs_section(index, chunks, vectors,objectif,verrou,annee,societe):
-    return generate_section_with_rag("Indicateurs de R&D", prompt_indicateurs(objectif,verrou,annee,societe), index, chunks, vectors)
+def generate_contexte_section(index, chunks, vectors, objectif, verrou, annee, societe):
+    return generate_section_with_rag("Contexte de l’opération de R&D", prompt_contexte(objectif, verrou, annee, societe), index, chunks, vectors)
 
-def generate_objectifs_section(index, chunks, vectors,objectif,verrou,annee,societe):
-    return generate_section_with_rag("Objet de l’opération de R&D", prompt_objectifs(objectif,verrou,annee,societe), index, chunks, vectors)
+def generate_indicateurs_section(index, chunks, vectors, objectif, verrou, annee, societe):
+    return generate_section_with_rag("Indicateurs de R&D", prompt_indicateurs(objectif, verrou, annee, societe), index, chunks, vectors)
 
-def generate_travaux_section(index, chunks, vectors,objectif,verrou,annee,societe):
-    return generate_section_with_rag("Description de la démarche suivie et des travaux réalisés", prompt_travaux(objectif,verrou,annee,societe), index, chunks, vectors)
+def generate_objectifs_section(index, chunks, vectors, objectif, verrou, annee, societe, articles=[]):
+    base_section = generate_section_with_rag("Objet de l’opération de R&D", prompt_objectifs(objectif, verrou, annee, societe), index, chunks, vectors)
 
-def generate_contribution_section(index, chunks, vectors,objectif,verrou,annee,societe):
-    return generate_section_with_rag("Contribution scientifique, technique ou technologique", prompt_contribution(objectif,verrou,annee,societe), index, chunks, vectors)
+    # Ajout des références si des articles ont été sélectionnés
+    if articles:
+        base_section += "\n\n📚 Publications pertinentes utilisées :\n"
+        for article in articles:
+            base_section += f"- {article['authors']} ({article['year']}). {article['title']}.\n"
 
-def generate_partenariat_section(index, chunks, vectors,objectif,verrou,annee,societe):
-    return generate_section_with_rag("Partenariat scientifique et recherche confiée", prompt_partenariat(objectif,verrou,annee,societe), index, chunks, vectors)
-def generate_biblio_section(index, chunks, vectors,objet):
+    return base_section
+
+def generate_travaux_section(index, chunks, vectors, objectif, verrou, annee, societe):
+    return generate_section_with_rag("Description de la démarche suivie et des travaux réalisés", prompt_travaux(objectif, verrou, annee, societe), index, chunks, vectors)
+
+def generate_contribution_section(index, chunks, vectors, objectif, verrou, annee, societe):
+    return generate_section_with_rag("Contribution scientifique, technique ou technologique", prompt_contribution(objectif, verrou, annee, societe), index, chunks, vectors)
+
+def generate_partenariat_section(index, chunks, vectors, objectif, verrou, annee, societe):
+    return generate_section_with_rag("Partenariat scientifique et recherche confiée", prompt_partenariat(objectif, verrou, annee, societe), index, chunks, vectors)
+
+def generate_biblio_section(index, chunks, vectors, objet, articles=[]):
+    if articles:
+        # Format ISO simplifié
+        def format_iso(article):
+            auteurs = article["authors"]
+            annee = article["year"]
+            titre = article["title"]
+            url = article.get("url", "")
+            return f"{auteurs} ({annee}). *{titre}*. Disponible sur : {url}"
+
+        articles_sorted = sorted(articles, key=lambda x: x["authors"].split(",")[0].strip().lower())
+        return "\n".join([format_iso(a) for a in articles_sorted])
+
+    # Fallback si pas d’articles : génération RAG
     return generate_section_with_rag("Références bibliographiques", prompt_biblio(objet), index, chunks, vectors)
