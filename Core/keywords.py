@@ -15,22 +15,26 @@ client = AzureOpenAI(
 GPT_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 SERPAPI_KEY = os.getenv("SERPAPI_API_KEY")
 
-def extract_keywords(text, max_keywords=2):
-    """Utilise GPT pour extraire des mots-clés combinés et pertinents à partir du contenu scientifique"""
+def extract_keywords(text, max_keywords=5):
+    """Utilise GPT pour extraire des mots-clés scientifiques ET techniques précis"""
     prompt = f"""
-Tu es un expert scientifique.
+Tu es un expert scientifique et technique.
 
-À partir du texte ci-dessous, génère une liste de 1 à {max_keywords} expressions clés ou groupes de mots-clés scientifiques/techniques (2 à 5 mots chacun). Ces mots-clés doivent représenter précisément les concepts, technologies ou problématiques abordés. N’utilise pas de termes vagues ou trop génériques comme "recherche", "technologie", etc.
+À partir du texte ci-dessous, génère {max_keywords} mots-clés ou expressions-clés pertinents
+(2 à 5 mots chacun) comprenant au moins :
+- un ou plusieurs concepts scientifiques spécifiques
+- un ou plusieurs termes techniques ou technologies précises
+
+Ces mots-clés doivent être adaptés à une recherche bibliographique internationale
+et éviter les termes vagues (ex : "recherche", "technologie").
 
 Texte source :
-\"\"\"
-{text[:3000]}
-\"\"\"
+\"\"\"{text[:3000]}\"\"\"
 
 Format attendu :
-- mot-clé 1
-- mot-clé 2
-- ...
+mot-clé 1
+mot-clé 2
+...
     """
 
     response = client.chat.completions.create(
@@ -39,7 +43,7 @@ Format attendu :
             {"role": "system", "content": "Tu es un assistant en rédaction scientifique et technique."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.3,
+        temperature=0.2,
         max_tokens=300
     )
 

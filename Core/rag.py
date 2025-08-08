@@ -82,7 +82,6 @@ Consignes spécifiques :
 # ─────────────────────────────
 # ✍️ Prompts spécifiques
 # ─────────────────────────────
-
 def prompt_contribution(objectif, verrou, annee, societe):
     raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/contribution.txt"
     template = fetch_prompt_from_git(raw_url)
@@ -127,6 +126,26 @@ def prompt_biblio(objet):
 # 🔧 Générateurs spécifiques
 # ─────────────────────────────
 
+# Nouveau prompt objectifs qui inclut uniquement les articles sélectionnés
+def prompt_objectifs_filtre(objectif, verrou, annee, societe, articles):
+    raw_url = "https://raw.githubusercontent.com/saadichaima/prompt/refs/heads/main/objectifs.txt"
+    template = fetch_prompt_from_git(raw_url)
+
+    year_start = annee - 5
+    year_end = annee - 1
+    liste_articles = "\n".join([f"- {a['authors']} ({a['year']}). {a['title']}" for a in articles])
+    print("test",liste_articles)
+
+    return template.format(
+        objectif=objectif.strip(),
+        verrou=verrou.strip(),
+        annee=annee,
+        societe=societe.strip(),
+        liste_articles=liste_articles,
+        annee_debut=year_start,
+        annee_fin=year_end
+    )
+
 def generate_contexte_section(index, chunks, vectors, objectif, verrou, annee, societe):
     return generate_section_with_rag("Contexte de l’opération de R&D", prompt_contexte(objectif, verrou, annee, societe), index, chunks, vectors)
 
@@ -134,15 +153,14 @@ def generate_indicateurs_section(index, chunks, vectors, objectif, verrou, annee
     return generate_section_with_rag("Indicateurs de R&D", prompt_indicateurs(objectif, verrou, annee, societe), index, chunks, vectors)
 
 def generate_objectifs_section(index, chunks, vectors, objectif, verrou, annee, societe, articles=[]):
-    base_section = generate_section_with_rag("Objet de l’opération de R&D", prompt_objectifs(objectif, verrou, annee, societe), index, chunks, vectors)
-
-    # Ajout des références si des articles ont été sélectionnés
-    if articles:
-        base_section += "\n\n📚 Publications pertinentes utilisées :\n"
-        for article in articles:
-            base_section += f"- {article['authors']} ({article['year']}). {article['title']}.\n"
-
-    return base_section
+    # Utilise uniquement les articles cochés
+    return generate_section_with_rag(
+        "Objet de l’opération de R&D",
+        prompt_objectifs_filtre(objectif, verrou, annee, societe, articles),
+        index,
+        chunks,
+        vectors
+    )
 
 def generate_travaux_section(index, chunks, vectors, objectif, verrou, annee, societe):
     return generate_section_with_rag("Description de la démarche suivie et des travaux réalisés", prompt_travaux(objectif, verrou, annee, societe), index, chunks, vectors)
@@ -163,7 +181,15 @@ def generate_biblio_section(index, chunks, vectors, objet, articles=[]):
             url = article.get("url", "")
             return f"{auteurs} ({annee}). *{titre}*. Disponible sur : {url}"
 
-        articles_sorted = sorted(articles, key=lambda x: x["authors"].split(",")[0].strip().lower())
+        # Supprimer doublons par titre
+        seen = set()
+        unique_articles = []
+        for a in articles:
+            if a["title"] not in seen:
+                seen.add(a["title"])
+                unique_articles.append(a)
+
+        articles_sorted = sorted(unique_articles, key=lambda x: x["authors"].split(",")[0].strip().lower())
         return "\n".join([format_iso(a) for a in articles_sorted])
 
     # Fallback si pas d’articles : génération RAG
