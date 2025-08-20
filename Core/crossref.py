@@ -55,3 +55,4 @@ def search_articles_crossref(keywords, annee_reference=2025, max_articles=10):
 
     # Retourner les meilleurs articles
     return found[:max_articles]
+
